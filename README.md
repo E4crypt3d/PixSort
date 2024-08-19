@@ -1,233 +1,84 @@
-# Created by https://www.toptal.com/developers/gitignore/api/python
+# PixSort Documentation
+## Overview
+PixSort is a Python script designed to help users organize their image files by sorting them into folders based on their resolution. The script can move or copy images from a source directory to a target directory, categorizing them into folders such as `'16K'`, `'12K'`, `'8K'`, etc., according to their resolution. The script also handles errors and warnings, logging them for review.
+
+## Features
+- `Sort Images`: Organizes images into folders based on their resolution.
+- `Move or Copy`: Option to either move or copy the images to the target directory.
+- `Multi-threaded Processing`: Utilizes multiple threads to speed up processing.
+- `Error Logging`: Logs errors and warnings related to image processing.
+## User Documentation
+Prerequisites
+- `Python`: Ensure Python 3.6 or higher is installed.
+
+- Libraries: The script requires the following Python libraries:
+
+```
+PIL (Pillow)
+colorama
+concurrent.futures
+```
+Install these libraries using pip:
+
+```
+pip install pillow colorama
+```
+## How to Use
+Prepare Your Directories:
+
+- `Input Folder`: The folder containing the images you want to sort.
+- `Output Folder`: The folder where sorted images will be saved. If not specified, defaults to `Sorted_images` in the current working directory.
+- Run the Script:
+- Open a terminal or command prompt and run the following command:
+
+```
+python pixsort.py -i /path/to/input/folder -o /path/to/output/folder --action move
+```
+Replace `/path/to/input/folder` with the path to your input directory and `/path/to/output/folder` with your desired output directory. Use `--action copy` if you prefer to copy files instead of moving them.
+
+### View Results:
+
+- `Sorted Images`: Check the output folder for sorted images categorized by resolution.
+- `Logs`: Check `logs.txt` in the output folder for any warnings or errors encountered during processing.
+## Example
+To sort images in `C:/Users/YourName/Pictures` and move them to `C:/Users/YourName/SortedImages`, run:
+
+```
+python pixsort.py -i C:/Users/YourName/Pictures -o C:/Users/YourName/SortedImages --action move
+```
+## Developer Documentation
+Code Overview
+- `log_error(file_path, error_message)`: Logs errors related to image processing.
+- `classify_image(image_path)`: Determines the resolution category of an image.
+- `process_image(file_path, output_folder, action, summary)`: Processes individual image files by moving or copying them to appropriate folders.
+- `sort_images(input_folder, output_folder, action, summary)`: Main function that traverses the input folder and uses threads to process images.
+- `main()`: Entry point of the script, handles argument parsing and summarizes results.
+### Libraries Used
+- `Pillow`: For image processing.
+- `Colorama`: For colored terminal output.
+- `Concurrent Futures`: For multi-threading to improve performance.
+### Adding New Features
+- Extend Resolution Categories:
+Update the `RESOLUTION_CATEGORIES` dictionary to include new resolution categories.
+
+### Add Support for More Formats:
+Modify the `SUPPORTED_FORMATS` tuple to include additional image file extensions.
+
+### Improve Error Handling:
+Add more specific exceptions or error handling mechanisms in the `process_image` function to handle different types of image-related issues.
+
+### Code Structure
+- `Logging`: Implemented via log_error function which appends error messages to `logs.txt`.
+- `Image Classification`: Uses resolution categories to classify images.
+- `Multithreading`: Utilized to handle large volumes of images efficiently.
+### Development Setup
+- Clone Repository:
+```
+git clone https://github.com/your-repo/pixsort.git
+cd pixsort
+```
+- Install Dependencies:
+```
+pip install -r requirements.txt
+```
 
-# Edit at https://www.toptal.com/developers/gitignore?templates=python
-
-### Python
-
-# Byte-compiled / optimized / DLL files
-
-**pycache**/
-_.py[cod]
-_$py.class
-
-# C extensions
-
-\*.so
-
-# Distribution / packaging
-
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-_.egg-info/
-.installed.cfg
-_.egg
-MANIFEST
-
-# PyInstaller
-
-# Usually these files are written by a python script from a template
-
-# before PyInstaller builds the exe, so as to inject date/other infos into it.
-
-_.manifest
-_.spec
-
-# Installer logs
-
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage._
-.cache
-nosetests.xml
-coverage.xml
-_.cover
-\*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-
-_.mo
-_.pot
-
-# Django stuff:
-
-\*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-
-.scrapy
-
-# Sphinx documentation
-
-docs/\_build/
-
-# PyBuilder
-
-.pybuilder/
-target/
-
-# Jupyter Notebook
-
-.ipynb_checkpoints
-
-# IPython
-
-profile_default/
-ipython_config.py
-
-# pyenv
-
-# For a library or package, you might want to ignore these files since the code is
-
-# intended to run in multiple environments; otherwise, check them in:
-
-# .python-version
-
-# pipenv
-
-# According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-
-# However, in case of collaboration, if having platform-specific dependencies or dependencies
-
-# having no cross-platform support, pipenv may install dependencies that don't work, or not
-
-# install all needed dependencies.
-
-#Pipfile.lock
-
-# poetry
-
-# Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-
-# This is especially recommended for binary packages to ensure reproducibility, and is more
-
-# commonly ignored for libraries.
-
-# https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-
-#poetry.lock
-
-# pdm
-
-# Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-
-#pdm.lock
-
-# pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-
-# in version control.
-
-# https://pdm.fming.dev/#use-with-ide
-
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-
-**pypackages**/
-
-# Celery stuff
-
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-
-\*.sage.py
-
-# Environments
-
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-
-.spyderproject
-.spyproject
-
-# Rope project settings
-
-.ropeproject
-
-# mkdocs documentation
-
-/site
-
-# mypy
-
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-
-.pyre/
-
-# pytype static type analyzer
-
-.pytype/
-
-# Cython debug symbols
-
-cython_debug/
-
-# PyCharm
-
-# JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-
-# be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-
-# and can be added to the global gitignore or merged into this file. For a more nuclear
-
-# option (not recommended) you can uncomment the following to ignore the entire idea folder.
-
-#.idea/
-
-### Python Patch
-
-# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
-
-poetry.toml
-
-# ruff
-
-.ruff_cache/
-
-# LSP config files
-
-pyrightconfig.json
-
-# End of https://www.toptal.com/developers/gitignore/api/python
