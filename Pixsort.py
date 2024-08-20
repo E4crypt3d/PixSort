@@ -45,8 +45,7 @@ class Pixsort:
     @staticmethod
     def log_error(file_path, error_message):
         """Log file paths that have errors."""
-        output_folder = os.getcwd()
-        log_file_path = os.path.join(output_folder, 'logs.txt')
+        log_file_path = os.path.join(os.getcwd(), 'logs.txt')
 
         file_size = os.path.getsize(
             file_path) if os.path.exists(file_path) else 0
@@ -80,26 +79,26 @@ class Pixsort:
 
     def process_image(self, file_path):
         """Process and move or copy a single image to the appropriate folder."""
-        if file_path.lower().endswith(SUPPORTED_FORMATS):
-            resolution_type = self.classify_image(file_path)
-            if resolution_type == 'Warning':
-                destination_folder = os.path.join(
-                    self.output_folder, 'Unsorted')
-            elif resolution_type and resolution_type != 'Error':
-                destination_folder = os.path.join(
-                    self.output_folder, resolution_type)
+        try:
+            if file_path.lower().endswith(SUPPORTED_FORMATS):
+                resolution_type = self.classify_image(file_path)
+                if resolution_type == 'Warning':
+                    destination_folder = os.path.join(
+                        self.output_folder, 'Unsorted')
+                elif resolution_type and resolution_type != 'Error':
+                    destination_folder = os.path.join(
+                        self.output_folder, resolution_type)
+                else:
+                    destination_folder = os.path.join(
+                        self.output_folder, 'Unclassified')
             else:
                 destination_folder = os.path.join(
                     self.output_folder, 'Unclassified')
-        else:
-            destination_folder = os.path.join(
-                self.output_folder, 'Unclassified')
 
-        os.makedirs(destination_folder, exist_ok=True)
-        destination_path = os.path.join(
-            destination_folder, os.path.basename(file_path))
+            os.makedirs(destination_folder, exist_ok=True)
+            destination_path = os.path.join(
+                destination_folder, os.path.basename(file_path))
 
-        try:
             if self.action == 'move':
                 shutil.move(file_path, destination_path)
                 self.summary['moved_files'] += 1
@@ -127,7 +126,7 @@ class Pixsort:
                 file_path = os.path.join(root, file)
                 image_files.append(file_path)
 
-        # Use a ThreadPoolExecutor with a limited number of workers
+        # Use a ThreadPoolExecutor with a dynamic number of workers
         num_workers = max(2, min(int((os.cpu_count() or 1) * 2), 8) if not hasattr(os, 'getloadavg')
                           else min(int((os.cpu_count() or 1) * (1 / (1 + os.getloadavg()[0] / (os.cpu_count() or 1)))), 8))
 
