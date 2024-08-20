@@ -7,7 +7,7 @@ from PIL import Image
 from PIL.Image import DecompressionBombWarning
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from colorama import Fore, Style, init
-
+import psutil  # Import psutil for disk space checks
 
 init(autoreset=True)
 
@@ -39,7 +39,9 @@ class Pixsort:
         self.summary = {
             'moved_files': 0,
             'failed_files': 0,
-            'total_size': 0
+            'total_size': 0,
+            'available_space': 0,
+            'folder_summary': {}  # To track number of files and sizes for each resolution folder
         }
 
     @staticmethod
@@ -69,13 +71,23 @@ class Pixsort:
                     return 'Unclassified'
         except DecompressionBombWarning as e:
             Pixsort.log_error(image_path, str(e))
-            print(Fore.YELLOW +
-                  f"Decompression bomb warning for {image_path}. Path logged to logs.txt.")
+            print(
+                Fore.YELLOW + f"Decompression bomb warning for {image_path}. Path logged to logs.txt.")
             return 'Warning'
         except Exception as e:
             Pixsort.log_error(image_path, f"{e}")
             print(Fore.RED + f"Error processing {image_path}: {e}")
             return 'Error'
+
+    def check_disk_space(self):
+        """Check available disk space in the output folder's drive."""
+        try:
+            total, used, free = psutil.disk_usage(self.output_folder).total, psutil.disk_usage(
+                self.output_folder).used, psutil.disk_usage(self.output_folder).free
+            return free
+        except Exception as e:
+            print(Fore.RED + f"Error checking disk space: {e}")
+            return 0
 
     def process_image(self, file_path):
         """Process and move or copy a single image to the appropriate folder."""
@@ -99,6 +111,14 @@ class Pixsort:
             destination_path = os.path.join(
                 destination_folder, os.path.basename(file_path))
 
+            # Check disk space before copying
+            if self.action == 'copy':
+                file_size = os.path.getsize(file_path)
+                available_space = self.check_disk_space()
+
+                if available_space < file_size:
+                    raise IOError("Insufficient disk space to copy the file.")
+
             if self.action == 'move':
                 shutil.move(file_path, destination_path)
                 self.summary['moved_files'] += 1
@@ -110,7 +130,16 @@ class Pixsort:
                 print(
                     Fore.BLUE + f"Copied {os.path.basename(file_path)} to {destination_folder}")
 
-            self.summary['total_size'] += os.path.getsize(destination_path)
+            file_size = os.path.getsize(destination_path)
+            self.summary['total_size'] += file_size
+
+            # Update folder summary
+            if destination_folder not in self.summary['folder_summary']:
+                self.summary['folder_summary'][destination_folder] = {
+                    'count': 0, 'size': 0}
+            self.summary['folder_summary'][destination_folder]['count'] += 1
+            self.summary['folder_summary'][destination_folder]['size'] += file_size
+
         except Exception as e:
             self.log_error(file_path, f"Failed to {self.action}: {e}")
             print(Fore.RED + f"Failed to {self.action} {file_path}: {e}")
@@ -143,6 +172,35 @@ class Pixsort:
                     print(
                         Fore.RED + f"Failed to {self.action} {file_path}: {e}")
 
+    def handle_keyboard_interrupt(self):
+        """Handle keyboard interrupt gracefully."""
+        print(Fore.RED + "\nOperation interrupted by user. Exiting...")
+
+    def show_summary(self, elapsed_time):
+        """Show the summary of the operation."""
+        available_space_mb = self.check_disk_space() / (1024 * 1024)
+
+        print("\n" + Fore.YELLOW + "Summary:")
+        print(
+            f"Total files processed: {self.summary['moved_files'] + self.summary['failed_files']}")
+        print(
+            f"Files successfully {self.action}d: {self.summary['moved_files']}")
+        print(f"Files failed to {self.action}: {self.summary['failed_files']}")
+        print(
+            f"Total data size {self.action}d: {self.summary['total_size'] / (1024 * 1024):.2f} MB")
+        print(f"Available disk space: {available_space_mb:.2f} MB")
+        print(f"Total time taken: {elapsed_time:.2f} seconds.")
+        print(Fore.YELLOW +
+              f"Check logs.txt for files that triggered warnings or errors.")
+
+        # Detailed folder summary
+        print(Fore.YELLOW + "\nDetailed Folder Summary:")
+        for folder, details in self.summary['folder_summary'].items():
+            res = folder.split('\\')[-1]
+            count = details['count']
+            size_mb = details['size'] / (1024 * 1024)
+            print(f"{res}: {count} files, {size_mb:.2f} MB")
+
 
 def main():
     print(Fore.CYAN + "PixSort - Created with love by E4CRYPT3D")
@@ -171,18 +229,13 @@ def main():
     sorter = Pixsort(input_folder, output_folder, action)
 
     start_time = time.time()
-    sorter.sort_images()
-    elapsed_time = time.time() - start_time
-
-    print("\n" + Fore.YELLOW + "Summary:")
-    print(
-        f"Total files processed: {sorter.summary['moved_files'] + sorter.summary['failed_files']}")
-    print(f"Files successfully {action}d: {sorter.summary['moved_files']}")
-    print(f"Files failed to {action}: {sorter.summary['failed_files']}")
-    print(
-        f"Total data size {action}d: {sorter.summary['total_size'] / (1024 * 1024):.2f} MB")
-    print(f"Total time taken: {elapsed_time:.2f} seconds.")
-    print(Fore.YELLOW + f"Check logs.txt for files that triggered warnings or errors.")
+    try:
+        sorter.sort_images()
+    except KeyboardInterrupt:
+        sorter.handle_keyboard_interrupt()
+    finally:
+        elapsed_time = time.time() - start_time
+        sorter.show_summary(elapsed_time)
 
 
 if __name__ == "__main__":
