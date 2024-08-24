@@ -27,8 +27,12 @@ RESOLUTION_CATEGORIES = {
 }
 
 # Supported image formats
-SUPPORTED_FORMATS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp', '.jfif', '.heif', '.heic', '.psd', '.ico', '.cur', '.tga', '.dng', '.nef', '.cr2', '.orf', '.sr2',
-                     '.arw', '.raf', '.dcr', '.k25', '.kdc', '.raw', '.3fr', '.ari', '.srw', '.dcs', '.drf', '.mef', '.nrw', '.pef', '.ptx', '.pxn', '.rw2', '.rwl', '.srw', '.x3f', '.xrf')
+SUPPORTED_IMAGE_FORMATS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp', '.jfif', '.heif', '.heic', '.psd', '.ico', '.cur', '.tga', '.dng', '.nef', '.cr2', '.orf', '.sr2',
+                           '.arw', '.raf', '.dcr', '.k25', '.kdc', '.raw', '.3fr', '.ari', '.srw', '.dcs', '.drf', '.mef', '.nrw', '.pef', '.ptx', '.pxn', '.rw2', '.rwl', '.srw', '.x3f', '.xrf')
+
+# Supported video formats
+SUPPORTED_VIDEO_FORMATS = ('.mp4', '.avi', '.mkv', '.mov', '.flv', '.wmv',
+                           '.webm', '.mpeg', '.mpg', '.3gp', '.m4v', '.m2ts', '.ts', '.vob', '.ogv')
 
 
 class Pixsort:
@@ -89,10 +93,10 @@ class Pixsort:
             print(Fore.RED + f"Error checking disk space: {e}")
             return 0
 
-    def process_image(self, file_path):
-        """Process and move or copy a single image to the appropriate folder."""
+    def process_file(self, file_path):
+        """Process and move or copy a single file to the appropriate folder."""
         try:
-            if file_path.lower().endswith(SUPPORTED_FORMATS):
+            if file_path.lower().endswith(SUPPORTED_IMAGE_FORMATS):
                 resolution_type = self.classify_image(file_path)
                 if resolution_type == 'Warning':
                     destination_folder = os.path.join(
@@ -103,6 +107,8 @@ class Pixsort:
                 else:
                     destination_folder = os.path.join(
                         self.output_folder, 'Unclassified')
+            elif file_path.lower().endswith(SUPPORTED_VIDEO_FORMATS):
+                destination_folder = os.path.join(self.output_folder, 'Videos')
             else:
                 destination_folder = os.path.join(
                     self.output_folder, 'Unclassified')
@@ -145,15 +151,15 @@ class Pixsort:
             print(Fore.RED + f"Failed to {self.action} {file_path}: {e}")
             self.summary['failed_files'] += 1
 
-    def sort_images(self):
-        """Sort images into folders based on their resolution."""
+    def sort_files(self):
+        """Sort files into folders based on their resolution or type."""
         os.makedirs(self.output_folder, exist_ok=True)
 
-        image_files = []
+        file_paths = []
         for root, dirs, files in os.walk(self.input_folder):
             for file in files:
                 file_path = os.path.join(root, file)
-                image_files.append(file_path)
+                file_paths.append(file_path)
 
         # Use a ThreadPoolExecutor with a dynamic number of workers
         num_workers = max(2, min(int((os.cpu_count() or 1) * 2), 8) if not hasattr(os, 'getloadavg')
@@ -161,7 +167,7 @@ class Pixsort:
 
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             futures = {executor.submit(
-                self.process_image, file_path): file_path for file_path in image_files}
+                self.process_file, file_path): file_path for file_path in file_paths}
 
             for future in as_completed(futures):
                 file_path = futures[future]
@@ -193,49 +199,43 @@ class Pixsort:
         print(Fore.YELLOW +
               f"Check logs.txt for files that triggered warnings or errors.")
 
-        # Detailed folder summary
-        print(Fore.YELLOW + "\nDetailed Folder Summary:")
+        # Display folder-wise summary
+        print(Fore.CYAN + "\nFolder-wise Summary:")
         for folder, details in self.summary['folder_summary'].items():
-            res = folder.split('\\')[-1]
-            count = details['count']
-            size_mb = details['size'] / (1024 * 1024)
-            print(f"{res}: {count} files, {size_mb:.2f} MB")
+            folder_size_mb = details['size'] / (1024 * 1024)
+            print(
+                f"{folder}: {details['count']} files, {folder_size_mb:.2f} MB")
+
+        # Include a note about who created the script
+        print(Fore.MAGENTA + "\nPixSort created with love by E4CRYPT3D.")
+
+
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Sort images and videos into folders based on resolution or type.")
+    parser.add_argument('input_folder', type=str,
+                        help="Path to the input folder containing files to sort.")
+    parser.add_argument('output_folder', type=str,
+                        help="Path to the output folder where sorted files will be placed.")
+    parser.add_argument('action', type=str, choices=[
+                        'move', 'copy'], help="Whether to move or copy the files.")
+    return parser.parse_args()
 
 
 def main():
-    print(Fore.CYAN + "PixSort - Created with love by E4CRYPT3D")
+    args = parse_arguments()
 
-    parser = argparse.ArgumentParser(
-        description="Sort images into folders based on resolution.")
-    parser.add_argument('-i', '--input', required=True,
-                        help='Input folder containing images.')
-    parser.add_argument('-o', '--output', required=False,
-                        help='Output folder to store sorted images.',
-                        default=os.path.join(os.getcwd(), 'Sorted_images'))
-    parser.add_argument('--action', choices=['move', 'copy'],
-                        default='move', help='Choose whether to move or copy the files.')
-
-    args = parser.parse_args()
-
-    input_folder = os.path.abspath(args.input)
-    output_folder = os.path.abspath(args.output)
-    action = args.action
-
-    # Clear previous logs
-    log_file_path = os.path.join(output_folder, 'logs.txt')
-    if os.path.exists(log_file_path):
-        os.remove(log_file_path)
-
-    sorter = Pixsort(input_folder, output_folder, action)
-
+    pixsorter = Pixsort(args.input_folder, args.output_folder, args.action)
     start_time = time.time()
+
     try:
-        sorter.sort_images()
+        pixsorter.sort_files()
     except KeyboardInterrupt:
-        sorter.handle_keyboard_interrupt()
-    finally:
-        elapsed_time = time.time() - start_time
-        sorter.show_summary(elapsed_time)
+        pixsorter.handle_keyboard_interrupt()
+
+    elapsed_time = time.time() - start_time
+    pixsorter.show_summary(elapsed_time)
 
 
 if __name__ == "__main__":
