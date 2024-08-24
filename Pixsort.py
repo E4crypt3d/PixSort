@@ -6,7 +6,7 @@ import warnings
 from PIL import Image
 from PIL.Image import DecompressionBombWarning
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from colorama import Fore, init
+from colorama import Fore, Style, init
 import psutil
 import sys
 
@@ -53,15 +53,16 @@ class Pixsort:
         """Log file paths that have errors."""
         log_file_path = os.path.join(os.getcwd(), 'logs.txt')
 
-        file_size = os.path.getsize(
-            file_path) if os.path.exists(file_path) else 0
+        try:
+            file_size = os.path.getsize(
+                file_path) if os.path.exists(file_path) else 0
+            with open(log_file_path, 'a') as log_file:
+                log_file.write(
+                    f"{file_path} | {error_message} | Size: {file_size} bytes\n")
+        except Exception as e:
+            print(Fore.RED + f"Failed to log error for {file_path}: {e}")
 
-        with open(log_file_path, 'a') as log_file:
-            log_file.write(
-                f"{file_path} | {error_message} | Size: {file_size} bytes\n")
-
-    @staticmethod
-    def classify_image(image_path):
+    def classify_image(self, image_path):
         """Classify image based on its resolution."""
         try:
             with warnings.catch_warnings():
@@ -69,18 +70,39 @@ class Pixsort:
                 with Image.open(image_path) as img:
                     width, height = img.size
 
-                    for category, (w, h) in sorted(RESOLUTION_CATEGORIES.items(), key=lambda item: item[1], reverse=True):
+                    # Define the sorted resolution categories for efficient classification
+                    sorted_categories = sorted(
+                        RESOLUTION_CATEGORIES.items(),
+                        key=lambda item: item[1],
+                        reverse=True
+                    )
+
+                    for category, (w, h) in sorted_categories:
                         if width >= w and height >= h:
                             return category
+
+                    # Return 'Unclassified' if no category matches
                     return 'Unclassified'
+
         except DecompressionBombWarning as e:
-            Pixsort.log_error(image_path, str(e))
+            self.log_error(image_path, f"Decompression bomb warning: {e}")
             print(
                 Fore.YELLOW + f"Decompression bomb warning for {image_path}. Path logged to logs.txt.")
             return 'Warning'
+
+        except FileNotFoundError:
+            self.log_error(image_path, "File not found")
+            print(Fore.RED + f"File not found: {image_path}")
+            return 'Error'
+
+        except IOError as e:
+            self.log_error(image_path, f"IOError: {e}")
+            print(Fore.RED + f"IOError processing {image_path}: {e}")
+            return 'Error'
+
         except Exception as e:
-            Pixsort.log_error(image_path, f"{e}")
-            print(Fore.RED + f"Error processing {image_path}: {e}")
+            self.log_error(image_path, f"Unexpected error: {e}")
+            print(Fore.RED + f"Unexpected error processing {image_path}: {e}")
             return 'Error'
 
     def check_disk_space(self):
@@ -193,43 +215,62 @@ class Pixsort:
         print(Fore.RED + "\nOperation interrupted by user. Exiting...")
 
     def show_summary(self, elapsed_time):
-        """Show the summary of the operation."""
+        script_name = "PixSort"
+        creator_name = "E4CRYPT3D"
         available_space_mb = self.check_disk_space() / (1024 * 1024)
 
-        print("\n" + Fore.YELLOW + "Summary:")
-        print(
-            f"Total files processed: {self.summary['moved_files'] + self.summary['failed_files']}")
-        print(
-            f"Files successfully {self.action}d: {self.summary['moved_files']}")
-        print(f"Files failed to {self.action}: {self.summary['failed_files']}")
-        print(
-            f"Total data size {self.action}d: {self.summary['total_size'] / (1024 * 1024):.2f} MB")
-        print(f"Available disk space: {available_space_mb:.2f} MB")
-        print(f"Total time taken: {elapsed_time:.2f} seconds.")
-        print(Fore.YELLOW +
-              f"Check logs.txt for files that triggered warnings or errors.")
+        # Header
+        print(Fore.CYAN + "=" * 60)
+        print(Fore.CYAN + Style.BRIGHT +
+              f"{script_name} - Created by {creator_name}")
+        print(Fore.CYAN + "=" * 60)
 
-        # Detailed folder summary
-        print(Fore.YELLOW + "\nDetailed Folder Summary:")
-        for folder, details in self.summary['folder_summary'].items():
-            res = folder.split('\\')[-1]
-            count = details['count']
-            size_mb = details['size'] / (1024 * 1024)
-            print(f"{res}: {count} files, {size_mb:.2f} MB")
+        # Summary Statistics
+        print(Fore.GREEN + Style.BRIGHT +
+              f"Total files processed: {self.summary['moved_files'] + self.summary['failed_files']}")
+        print(Fore.GREEN + Style.BRIGHT +
+              f"Files successfully {self.action}d: {self.summary['moved_files']}")
+        print(Fore.RED + Style.BRIGHT +
+              f"Files failed to {self.action}: {self.summary['failed_files']}")
+        print(Fore.YELLOW + Style.BRIGHT +
+              f"Total data size {self.action}d: {self.summary['total_size'] / (1024 * 1024):.2f} MB")
+        print(Fore.YELLOW + Style.BRIGHT +
+              f"Available disk space: {available_space_mb:.2f} MB")
+        print(Fore.CYAN + Style.BRIGHT +
+              f"Total time taken: {elapsed_time:.2f} seconds.")
+        print(Fore.CYAN + "=" * 60)
+
+        # Detailed Folder Summary
+        print(Fore.CYAN + Style.BRIGHT + "Detailed Folder Summary:")
+        print(Fore.CYAN + "-" * 60)
+
+        if self.summary['folder_summary']:
+            for folder, details in self.summary['folder_summary'].items():
+                count = details['count']
+                size_mb = details['size'] / (1024 * 1024)
+                print(Fore.MAGENTA +
+                      f"• {folder}: {count} files, {size_mb:.2f} MB")
+        else:
+            print(Fore.YELLOW + "No files were sorted into specific resolution folders.")
+
+        print(Fore.CYAN + "=" * 60)
+        print(Fore.YELLOW + "Check logs.txt for files that triggered warnings or errors.")
 
 
 def main():
     print(Fore.CYAN + "PixSort - Created with love by E4CRYPT3D")
+    print(Fore.CYAN + "=" * 60)
 
     parser = argparse.ArgumentParser(
-        description="Sort images into folders based on resolution.")
+        description="Sort images and videos into folders based on their resolution or file type."
+    )
     parser.add_argument('-i', '--input', required=True,
-                        help='Input folder containing images.')
+                        help='Path to the input folder containing images and videos.')
     parser.add_argument('-o', '--output', required=False,
-                        help='Output folder to store sorted images.',
+                        help='Path to the output folder where sorted files will be stored. Defaults to a folder named "Sorted_images" in the current directory.',
                         default=os.path.join(os.getcwd(), 'Sorted_images'))
-    parser.add_argument('--action', choices=['move', 'copy'],
-                        default='move', help='Choose whether to move or copy the files.')
+    parser.add_argument('--action', choices=['move', 'copy'], default='move',
+                        help='Action to perform on files: move or copy. Default is "move".')
 
     args = parser.parse_args()
 
@@ -237,8 +278,14 @@ def main():
     output_folder = os.path.abspath(args.output)
     action = args.action
 
+    # Validate input folder
+    if not os.path.isdir(input_folder):
+        print(
+            Fore.RED + f"Error: The input folder '{input_folder}' does not exist or is not a directory.")
+        sys.exit(1)
+
     # Clear previous logs
-    log_file_path = os.path.join(output_folder, 'logs.txt')
+    log_file_path = os.path.join(os.getcwd(), 'logs.txt')
     if os.path.exists(log_file_path):
         os.remove(log_file_path)
 
