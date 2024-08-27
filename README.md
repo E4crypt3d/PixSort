@@ -1,44 +1,35 @@
-# PixSort
+# Pixsort
 
-PixSort is a Python script for sorting images and videos into folders based on their resolution or file type. It supports both moving and copying files and logs errors for troubleshooting.
+Pixsort is a Python script that sorts images into folders based on their resolution or file size. It can move or copy images to the specified destination directory.
 
 ## Features
 
-- Sorts images and videos by resolution or type.
-- Supports a wide range of image and video formats.
-- Logs errors to `logs.txt`.
-- Displays a detailed summary of processed files and folders.
+- Sort by Resolution: Categorizes images into folders like 4K, HD, etc.
+- Sort by File Size: Categorizes images into folders such as Small, Medium, Large, and Extra Large.
+- Move or Copy: Choose to either move or copy images.
+- Detailed Logging: Logs errors and warnings to a file.
 
-## Requirements
+## Installation
 
-Install dependencies using:
-
-```bash
-pip install pillow psutil colorama
-```
-
-### Usage
+Ensure you have Python and the necessary packages installed. You can install the required packages using:
 
 ```bash
-python pixsort.py -i <input_folder> -o <output_folder> --action <move|copy>
+pip install pillow colorama psutil
 ```
 
-### Arguments
+```bash
+python pixsort.py -i INPUT_FOLDER -o OUTPUT_FOLDER -a ACTION -s SORT_BY
+```
 
-- `-i` / `--input`: Path to the input folder `(required)`.
-- `-o` / `--output`: Path to the output folder `(default: Sorted_images in the current directory)`.
-- `--action`: Action to perform `(move or copy, default: move)`.
+## Arguments
+
+- `-i`, `--input`: Path to the folder containing images.
+- `-o`, `--output`: Path to the destination folder for sorted images. Default is `Sorted_images`.
+- `-a`, `--action`: Action to perform (`move` or `copy`). Default is `move`.
+- `-s`, `--sort_by`: Criteria for sorting (`resolution` or `size`). Default is `resolution`.
 
 ### Example
 
 ```bash
-python pixsort.py -i /path/to/input -o /path/to/output --action copy
+python pixsort.py -i /path/to/images -o /path/to/sorted -a move -s size
 ```
-
-### Error Logging
-
-- Errors and warnings are logged to `logs.txt` in the script's directory.
-
-#### Author
-
-- Created with love by E4CRYPT3D.
