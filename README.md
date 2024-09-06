@@ -33,3 +33,4 @@ python pixsort.py -i INPUT_FOLDER -o OUTPUT_FOLDER -a ACTION -s SORT_BY
 ```bash
 python pixsort.py -i /path/to/images -o /path/to/sorted -a move -s size
 ```
+You can use [1downy's](https://github.com/1downy) [HD-Wallpapers](https://github.com/1downy/HD-Wallpapers) for Testing this script.
