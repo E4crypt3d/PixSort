@@ -10,6 +10,7 @@ from colorama import Fore, Style, init
 import psutil
 import sys
 
+
 init(autoreset=True)
 
 # Resolution categories
@@ -24,7 +25,7 @@ RESOLUTION_CATEGORIES = {
     'Full HD': (1920, 1080),
     'HD': (1280, 720),
     'SD': (720, 480),
-    'Low': (0, 0)  # Default category for resolutions below SD
+    'Low': (0, 0)  # Default
 }
 
 # File size categories for images
@@ -45,6 +46,15 @@ SUPPORTED_VIDEO_FORMATS = ('.mp4', '.avi', '.mkv', '.mov', '.flv', '.wmv',
 
 class Pixsort:
     def __init__(self, input_folder, output_folder, action, sort_by):
+        """
+        Initialize Pixsort with the given parameters.
+
+        Parameters:
+            input_folder (str): The folder containing the images to sort.
+            output_folder (str): The folder where the sorted images will be moved or copied.
+            action (str): The action to perform. Either 'move' or 'copy'.
+            sort_by (str): The criteria for sorting. Either 'resolution' or 'size'.
+        """
         self.input_folder = input_folder
         self.output_folder = output_folder
         self.action = action
@@ -53,7 +63,7 @@ class Pixsort:
             'moved_files': 0,
             'failed_files': 0,
             'total_size': 0,
-            'folder_summary': {}  # To track number of files and sizes for each category folder
+            'folder_summary': {}
         }
 
     @staticmethod
@@ -78,7 +88,6 @@ class Pixsort:
                 with Image.open(image_path) as img:
                     width, height = img.size
 
-                    # Define the sorted resolution categories for efficient classification
                     sorted_categories = sorted(
                         RESOLUTION_CATEGORIES.items(),
                         key=lambda item: item[1],
@@ -89,7 +98,6 @@ class Pixsort:
                         if width >= w and height >= h:
                             return category
 
-                    # Return 'Unclassified' if no category matches
                     return 'Unclassified'
 
         except DecompressionBombWarning as e:
@@ -122,7 +130,6 @@ class Pixsort:
                 if min_size <= file_size < max_size:
                     return category
 
-            # Return 'Unclassified' if no category matches
             return 'Unclassified'
 
         except FileNotFoundError:
@@ -178,7 +185,6 @@ class Pixsort:
             destination_path = os.path.join(
                 destination_folder, os.path.basename(file_path))
 
-            # Check disk space before copying
             if self.action == 'copy':
                 file_size = os.path.getsize(file_path)
                 available_space = self.check_disk_space()
@@ -187,7 +193,7 @@ class Pixsort:
                     self.log_error(
                         file_path, "Insufficient disk space to copy the file.")
                     print(Fore.RED + "Error: Insufficient disk space. Exiting...")
-                    sys.exit(1)  # Exit the script with an error code
+                    sys.exit(1)
 
             if self.action == 'move':
                 shutil.move(file_path, destination_path)
@@ -203,7 +209,6 @@ class Pixsort:
             file_size = os.path.getsize(destination_path)
             self.summary['total_size'] += file_size
 
-            # Update folder summary
             if destination_folder not in self.summary['folder_summary']:
                 self.summary['folder_summary'][destination_folder] = {
                     'count': 0, 'size': 0}
@@ -225,7 +230,6 @@ class Pixsort:
                 file_path = os.path.join(root, file)
                 image_files.append(file_path)
 
-        # Use a ThreadPoolExecutor with a fixed number of workers
         num_workers = min(max(2, (os.cpu_count() or 1) * 2), 8)
 
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -235,17 +239,20 @@ class Pixsort:
             for future in as_completed(futures):
                 file_path = futures[future]
                 try:
-                    future.result()  # Ensures any raised exceptions are caught
+                    future.result()
                 except Exception as e:
                     self.log_error(file_path, f"Failed to {self.action}: {e}")
                     print(
                         Fore.RED + f"Failed to {self.action} {file_path}: {e}")
 
-    def handle_keyboard_interrupt(self):
+    def handle_keyboard_interrupt(self) -> None:
         """Handle keyboard interrupt gracefully."""
-        print(Fore.RED + "\nOperation interrupted by user. Exiting...")
+        print("\nOperation interrupted by user. Exiting...")
 
     def show_summary(self, elapsed_time):
+        """
+        Print a summary of the sorting operation.
+        """
         script_name = "PixSort"
         creator_name = "E4CRYPT3D"
         available_space_mb = self.check_disk_space() / (1024 * 1024)
@@ -311,7 +318,7 @@ def main():
 
     pixsort = Pixsort(args.input, args.output, args.action, args.sort_by)
 
-    # Clear previous logs
+    # Clearing logs
     log_file_path = os.path.join(os.getcwd(), 'logs.txt')
     if os.path.exists(log_file_path):
         os.remove(log_file_path)
